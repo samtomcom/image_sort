@@ -2,11 +2,12 @@ import sys
 import os
 import hashlib
 from PIL import Image  # uses pillow
+import shutil
 
 #rootdir = sys.argv[1]
-rootdir = '/media/clint/libraries/pictures'
-inputdir = os.path.join(rootdir,'test_in')
-outputdir = os.path.join(rootdir, 'test_out')
+rootdir = '/media/clint/libraries/pictures/wallpapers'
+inputdir = os.path.join(rootdir,'in')
+outputdir = os.path.join(rootdir, 'out')
 
 print(inputdir)
 
@@ -23,13 +24,36 @@ def gen_dict():
     file_dict = {}
     for subdir, dirs, files in os.walk(inputdir):
         for file in files:
-            print(file)
             full_path = os.path.join(inputdir, subdir, file)
             check = md5(full_path)
             im = Image.open(full_path)
             x, y = im.size
-            file_dict[check] = [file, full_path, x, y]
+            if check not in file_dict:
+                file_dict[check] = [file, full_path, x, y]
+            else:
+                print("Skipping duplicate file: {}".format(full_path))
     return file_dict
 
-print(gen_dict())
+def copy(file_dict):
+    aspect_ratios = {1.3: "1.33_4x3",
+                     1.8: "1.78_16x9",
+                     1.0: "1.00_1x1"
+    }
 
+    for check in file_dict:
+        file, full_path, x, y = tuple(file_dict[check])
+        aspect_r = round(float(x)/y, 1)
+        aspect_path = os.path.join(outputdir, str(aspect_r))
+        if aspect_r in aspect_ratios:
+            aspect_path = os.path.join(outputdir, aspect_ratios[aspect_r])
+
+        if not os.path.exists(aspect_path):
+            os.makedirs(aspect_path)
+
+        new_path = os.path.join(aspect_path, file)
+        if not os.path.exists(new_path):
+            shutil.copyfile(full_path, new_path)
+
+
+
+copy(gen_dict())
